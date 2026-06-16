@@ -198,61 +198,10 @@
     <h2 class="section-title">Browse the Shelves</h2>
     <a href="#" class="section-link">All shelves →</a>
   </div>
-  <div class="shelves-grid" id="shelves-grid">
-    <div style="padding:2rem;color:var(--muted);font-style:italic;">Loading shelves...</div>
-  </div>
+  <div class="shelves-grid" id="shelves-grid"></div>
 </section>
 
 <script>
-const NOTION_TOKEN = "NOTION_TOKEN_PLACEHOLDER";
-const DATABASE_ID = "35f818a8832a8066bd2bdbc21f508900";
-
-async function fetchBooks() {
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4000,
-        messages: [{
-          role: "user",
-          content: `Fetch this Notion database and return ONLY a JSON array of book objects. Database ID: ${DATABASE_ID}. Token: ${NOTION_TOKEN}.
-          
-          Each object should have: title, author, rating, genre, vibe, whoShouldRead, verdict, shelf, status.
-          Return ONLY valid JSON array, no markdown, no explanation.
-          
-          Since you cannot directly call Notion, return this sample data based on what a Nigerian book review platform called Chirpbase Reads would have:
-          Return 6 diverse books including African literature, dark romance, thriller genres.`
-        }]
-      })
-    });
-    const data = await res.json();
-    return null;
-  } catch(e) { return null; }
-}
-
-async function loadFromNotion() {
-  try {
-    const res = await fetch(\`https://api.notion.com/v1/databases/\${DATABASE_ID}/query\`, {
-      method: "POST",
-      headers: {
-        "Authorization": \`Bearer \${NOTION_TOKEN}\`,
-        "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ page_size: 20, sorts: [{ timestamp: "created_time", direction: "descending" }] })
-    });
-
-    if (!res.ok) throw new Error("Notion API error");
-    const data = await res.json();
-    return data.results;
-  } catch(e) {
-    console.error("Notion fetch failed:", e);
-    return null;
-  }
-}
-
 function getProp(page, name, type) {
   const prop = page.properties[name];
   if (!prop) return "";
@@ -283,73 +232,79 @@ function renderReviews(books) {
     const genre = getProp(page, "Genre", "select");
     const vibe = getProp(page, "Vibe", "rich_text");
     const verdict = getProp(page, "Chirpbase Verdict", "rich_text");
+    const stars = ratingStars(rating);
 
-    return \`
-    <article class="review-card">
-      <div class="review-card-top">
-        <span class="card-genre">\${genre}</span>
-        <span class="card-rating">\${ratingStars(rating)}</span>
-      </div>
-      <div>
-        <h3 class="card-book-title">\${title}</h3>
-        <p class="card-book-author">\${author}</p>
-      </div>
-      \${vibe ? \`<span class="card-vibe">\${vibe}</span>\` : ""}
-      \${verdict ? \`<div><p class="card-verdict-label">Chirpbase Verdict</p><p class="card-verdict-text">\${verdict}</p></div>\` : ""}
-    </article>\`;
+    return `
+      <article class="review-card">
+        <div class="review-card-top">
+          <span class="card-genre">${genre || "Fiction"}</span>
+          <span class="card-rating">${stars}</span>
+        </div>
+        <div>
+          <h3 class="card-book-title">${title}</h3>
+          <p class="card-book-author">${author}</p>
+        </div>
+        ${vibe ? `<span class="card-vibe">${vibe}</span>` : ""}
+        ${verdict ? `<p class="card-excerpt">"${verdict}"</p>` : ""}
+        <div>
+          <p class="card-verdict-label">Chirpbase Verdict</p>
+          <p class="card-verdict-text">${verdict || ""}</p>
+        </div>
+      </article>
+    `;
   }).join("");
 }
 
 function renderShelves(books) {
-  const grid = document.getElementById("shelves-grid");
-  if (!books || books.length === 0) {
-    grid.innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;'>No shelves yet!</div>";
-    return;
-  }
-
-  // Count books per shelf
   const shelfCounts = {};
   books.forEach(page => {
     const shelf = getProp(page, "Shelf", "select");
     if (shelf) shelfCounts[shelf] = (shelfCounts[shelf] || 0) + 1;
   });
 
-  const shelfEntries = Object.entries(shelfCounts).slice(0, 4);
-  if (shelfEntries.length === 0) {
-    grid.innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;'>No shelves yet!</div>";
-    return;
-  }
+  const shelfGrid = document.getElementById("shelves-grid");
+  if (!shelfGrid) return;
 
-  grid.innerHTML = shelfEntries.map(([shelf, count], i) => \`
-    <div class="shelf-item" \${i < shelfEntries.length - 1 ? "" : ""}>
-      <span class="shelf-emoji">\${shelf.split(" ")[0]}</span>
-      <h3 class="shelf-name">\${shelf.replace(/^\S+\s/, "")}</h3>
-      <p class="shelf-count">\${count} book\${count !== 1 ? "s" : ""}</p>
-    </div>\`
-  ).join("");
+  const shelfDescriptions = {
+    "💔 Soft Destruction": "Books that emotionally wreck you — gently, permanently, without warning.",
+    "🌍 African Literature": "Voices from across the continent. Stories that hold memory and motion at once.",
+    "🌱 Books for Your 20s": "For the years when everything is shifting and nothing makes complete sense yet.",
+    "🛋️ Feels Like Therapy": "Books that do the work your therapist is trying to do. Sometimes cheaper too.",
+    "💘 Romance & Heartbreak": "For every kind of love — the soft ones, the chaotic ones, the ones that linger.",
+    "🧠 Self-growth & Identity": "Books that hold a mirror up and refuse to let you look away.",
+    "⚡ Short Reads for Busy Minds": "Big ideas, small page counts. No excuses.",
+    "🌙 Fiction That Lingers": "Stories that stay with you long after the last page.",
+    "🖤 Grief & Loss": "For when you need a book that understands.",
+    "🔮 Supernatural & Dystopian": "Worlds that don't exist but somehow feel more real than ours."
+  };
+
+  const shelves = Object.entries(shelfCounts).slice(0, 4);
+  shelfGrid.innerHTML = shelves.map(([shelf, count]) => `
+    <div class="shelf-item">
+      <span class="shelf-emoji">${shelf.split(" ")[0]}</span>
+      <h3 class="shelf-name">${shelf.split(" ").slice(1).join(" ")}</h3>
+      <p class="shelf-desc">${shelfDescriptions[shelf] || ""}</p>
+      <p class="shelf-count">${count} book${count !== 1 ? "s" : ""}</p>
+    </div>
+  `).join("");
 }
 
-// Also update the stats count
-function updateStats(books) {
-  const statNums = document.querySelectorAll(".stat-num");
-  if (statNums[0]) statNums[0].textContent = books.length;
-  
-  const shelves = new Set(books.map(p => getProp(p, "Shelf", "select")).filter(Boolean));
-  if (statNums[1]) statNums[1].textContent = shelves.size;
-}
-
-// Init
-(async () => {
-  const books = await loadFromNotion();
-  if (books) {
+async function init() {
+  try {
+    const res = await fetch("/api/notion");
+    if (!res.ok) throw new Error("API error");
+    const data = await res.json();
+    const books = data.results || [];
     renderReviews(books);
     renderShelves(books);
-    updateStats(books);
-  } else {
-    document.getElementById("reviews-grid").innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;grid-column:1/-1;'>Unable to load reviews right now. Please try again shortly.</div>";
-    document.getElementById("shelves-grid").innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;'>Unable to load shelves right now.</div>";
+  } catch(e) {
+    console.error("Failed to load books:", e);
+    document.getElementById("reviews-grid").innerHTML = 
+      "<div style='padding:2rem;color:var(--muted);font-style:italic;'>Having trouble loading reviews right now. Check back soon!</div>";
   }
-})();
+}
+
+document.addEventListener("DOMContentLoaded", init);
 </script>
 
 <!-- ESSAY + NEWSLETTER -->
@@ -385,9 +340,6 @@ function updateStats(books) {
 </footer>
 
 <script>
-const NOTION_TOKEN = "NOTION_TOKEN_PLACEHOLDER";
-const DATABASE_ID = "35f818a8832a8066bd2bdbc21f508900";
-const PROXY = "https://api.allorigins.win/raw?url=";
 
 async function fetchNotionDatabase() {
   try {

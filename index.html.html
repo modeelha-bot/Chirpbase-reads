@@ -76,6 +76,8 @@
   .shelf-item { padding: 2rem; border-right: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
   .shelf-item:last-child { border-right: none; }
   .shelf-item:hover { background: rgba(26,20,16,0.03); }
+  .shelf-item.active { background: var(--rust-light); border-left: 3px solid var(--rust); }
+  .shelf-item { cursor: pointer; }
   .shelf-emoji { font-size: 1.6rem; margin-bottom: 0.75rem; display: block; }
   .shelf-name { font-family: "Playfair Display", serif; font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--ink); }
   .shelf-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
@@ -184,7 +186,7 @@
 <!-- RECENT REVIEWS -->
 <section>
   <div class="section-header">
-    <h2 class="section-title">Recent Reviews</h2>
+    <h2 class="section-title" id="reviews-title">Recent Reviews</h2>
     <a href="https://app.notion.com/p/35f818a8832a8066bd2bdbc21f508900" target="_blank" class="section-link">See all →</a>
   </div>
   <div class="reviews-grid" id="reviews-grid">
@@ -196,7 +198,7 @@
 <section>
   <div class="section-header">
     <h2 class="section-title">Browse the Shelves</h2>
-    <a href="#" class="section-link">All shelves →</a>
+    <a href="#" class="section-link" id="show-all-link" onclick="showAllReviews(); return false;">All books →</a>
   </div>
   <div class="shelves-grid" id="shelves-grid">
     <div style="padding:2rem;color:var(--muted);font-style:italic;">Loading shelves...</div>
@@ -239,6 +241,8 @@
 
 
 <script>
+let allBooks = [];
+
 async function loadBooks() {
   try {
     const res = await fetch("/api/notion");
@@ -266,15 +270,17 @@ function ratingStars(rating) {
   return "★".repeat(counts) + "☆".repeat(5 - counts);
 }
 
-function renderReviews(books) {
+function renderReviews(books, label) {
   const grid = document.getElementById("reviews-grid");
+  const titleEl = document.getElementById("reviews-title");
+  if (titleEl) titleEl.textContent = label || "Recent Reviews";
+
   if (!books || books.length === 0) {
-    grid.innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;'>Unable to load reviews right now.</div>";
+    grid.innerHTML = "<div style=\'padding:2rem;color:var(--muted);font-style:italic;grid-column:1/-1;\'>No books in this shelf yet.</div>";
     return;
   }
 
-  const recent = books.slice(0, 3);
-  grid.innerHTML = recent.map(page => {
+  grid.innerHTML = books.slice(0, 6).map(page => {
     const title = getProp(page, "Book Title", "title");
     const author = getProp(page, "Author", "rich_text");
     const rating = getProp(page, "Rating", "select");
@@ -284,7 +290,7 @@ function renderReviews(books) {
     const cover = getProp(page, "Cover", "files");
     return `
     <article class="review-card">
-      ${cover ? `<img src="${cover}" alt="${title}" class="card-cover" onerror="this.style.display='none'">` : ""}
+      ${cover ? `<img src="${cover}" alt="${title}" class="card-cover" onerror="this.style.display=\'none\'">` : ""}
       <div class="review-card-top">
         <span class="card-genre">${genre}</span>
         <span class="card-rating">${ratingStars(rating)}</span>
@@ -300,12 +306,32 @@ function renderReviews(books) {
       </div>
     </article>`;
   }).join("");
+
+  // Scroll to reviews section
+  document.querySelector("section").scrollIntoView({ behavior: "smooth" });
+}
+
+function filterByShelf(shelfName) {
+  // Highlight active shelf
+  document.querySelectorAll(".shelf-item").forEach(el => el.classList.remove("active"));
+  event.currentTarget.classList.add("active");
+
+  const filtered = allBooks.filter(page => getProp(page, "Shelf", "select") === shelfName);
+  renderReviews(filtered, shelfName.replace(/^\S+\s/, ""));
+
+  // Scroll reviews into view
+  document.getElementById("reviews-grid").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function showAllReviews() {
+  document.querySelectorAll(".shelf-item").forEach(el => el.classList.remove("active"));
+  renderReviews(allBooks, "All Reviews");
 }
 
 function renderShelves(books) {
   const grid = document.getElementById("shelves-grid");
   if (!books || books.length === 0) {
-    grid.innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;'>Unable to load shelves.</div>";
+    grid.innerHTML = "<div style=\'padding:2rem;color:var(--muted);font-style:italic;\'>Unable to load shelves.</div>";
     return;
   }
 
@@ -328,9 +354,9 @@ function renderShelves(books) {
     "🔮 Supernatural & Dystopian": "Worlds that don't exist but somehow feel more real than ours."
   };
 
-  const shelves = Object.entries(shelfCounts).slice(0, 4);
+  const shelves = Object.entries(shelfCounts);
   grid.innerHTML = shelves.map(([shelf, count]) => `
-    <div class="shelf-item">
+    <div class="shelf-item" onclick="filterByShelf('${shelf}')">
       <span class="shelf-emoji">${shelf.split(" ")[0]}</span>
       <h3 class="shelf-name">${shelf.replace(/^\S+\s/, "")}</h3>
       <p class="shelf-desc">${shelfDescs[shelf] || ""}</p>
@@ -343,7 +369,6 @@ function updateStats(books) {
   const countEl = document.getElementById("book-count");
   if (countEl) countEl.textContent = books.length;
 
-  // Update featured book
   if (books.length > 0) {
     const featured = books[0];
     const titleEl = document.querySelector(".book-title-featured");
@@ -358,14 +383,14 @@ function updateStats(books) {
 document.addEventListener("DOMContentLoaded", async () => {
   const books = await loadBooks();
   if (books) {
-    renderReviews(books);
+    allBooks = books;
+    renderReviews(books.slice(0, 3), "Recent Reviews");
     renderShelves(books);
     updateStats(books);
   } else {
-    document.getElementById("reviews-grid").innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;'>Unable to load reviews right now.</div>";
-    document.getElementById("shelves-grid").innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;'>Unable to load shelves right now.</div>";
+    document.getElementById("reviews-grid").innerHTML = "<div style=\'padding:2rem;color:var(--muted);font-style:italic;\'>Unable to load reviews right now.</div>";
+    document.getElementById("shelves-grid").innerHTML = "<div style=\'padding:2rem;color:var(--muted);font-style:italic;\'>Unable to load shelves right now.</div>";
   }
 });
 </script>
 </body>
-</html>

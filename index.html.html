@@ -311,10 +311,10 @@ function renderReviews(books, label) {
   document.querySelector("section").scrollIntoView({ behavior: "smooth" });
 }
 
-function filterByShelf(shelfName) {
+function filterByShelf(el, shelfName) {
   // Highlight active shelf
-  document.querySelectorAll(".shelf-item").forEach(el => el.classList.remove("active"));
-  event.currentTarget.classList.add("active");
+  document.querySelectorAll(".shelf-item").forEach(item => item.classList.remove("active"));
+  el.classList.add("active");
 
   const filtered = allBooks.filter(page => getProp(page, "Shelf", "select") === shelfName);
   renderReviews(filtered, shelfName.replace(/^\S+\s/, ""));
@@ -356,7 +356,7 @@ function renderShelves(books) {
 
   const shelves = Object.entries(shelfCounts);
   grid.innerHTML = shelves.map(([shelf, count]) => `
-    <div class="shelf-item" onclick="filterByShelf('${shelf}')">
+    <div class="shelf-item" onclick="filterByShelf(this, '${shelf}')">
       <span class="shelf-emoji">${shelf.split(" ")[0]}</span>
       <h3 class="shelf-name">${shelf.replace(/^\S+\s/, "")}</h3>
       <p class="shelf-desc">${shelfDescs[shelf] || ""}</p>

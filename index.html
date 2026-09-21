@@ -355,14 +355,28 @@ function renderShelves(books) {
   };
 
   const shelves = Object.entries(shelfCounts);
-  grid.innerHTML = shelves.map(([shelf, count]) => `
-    <div class="shelf-item" onclick="filterByShelf(this, '${shelf}')">
-      <span class="shelf-emoji">${shelf.split(" ")[0]}</span>
-      <h3 class="shelf-name">${shelf.replace(/^\S+\s/, "")}</h3>
+  grid.innerHTML = "";
+  shelves.forEach(([shelf, count]) => {
+    const div = document.createElement("div");
+    div.className = "shelf-item";
+    div.dataset.shelf = shelf;
+    const emoji = shelf.split(" ")[0];
+    const name = shelf.replace(/^[^\s]+\s/, "");
+    div.innerHTML = `
+      <span class="shelf-emoji">${emoji}</span>
+      <h3 class="shelf-name">${name}</h3>
       <p class="shelf-desc">${shelfDescs[shelf] || ""}</p>
-      <p class="shelf-count">${count} book${count !== 1 ? "s" : ""}</p>
-    </div>`
-  ).join("");
+      <p class="shelf-count">${count} book${count !== 1 ? "s" : ""}</p>`;
+    div.addEventListener("click", function() {
+      document.querySelectorAll(".shelf-item").forEach(el => el.classList.remove("active"));
+      this.classList.add("active");
+      const filtered = allBooks.filter(page => getProp(page, "Shelf", "select") === this.dataset.shelf);
+      const label = this.dataset.shelf.replace(/^[^\s]+\s/, "");
+      renderReviews(filtered, label);
+      document.getElementById("reviews-grid").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    grid.appendChild(div);
+  });
 }
 
 function updateStats(books) {

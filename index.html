@@ -305,11 +305,7 @@ function renderShelves(books) {
     (function(shelf, count) {
       var div = document.createElement("div");
       div.className = "shelf-item";
-      var parts = shelf.split(" ");
-      var emoji = parts[0];
-      var name = parts.slice(1).join(" ");
-      div.innerHTML = "<span class='shelf-emoji'>" + emoji + "</span>" +
-        "<h3 class='shelf-name'>" + name + "</h3>" +
+      div.innerHTML = "<h3 class='shelf-name'>" + shelf + "</h3>" +
         "<p class='shelf-count'>" + count + " book" + (count !== 1 ? "s" : "") + "</p>";
       div.onclick = function() {
         var all = document.querySelectorAll(".shelf-item");
@@ -319,7 +315,7 @@ function renderShelves(books) {
         for (var k = 0; k < allBooks.length; k++) {
           if (getProp(allBooks[k], "Shelf", "select") === shelf) filtered.push(allBooks[k]);
         }
-        renderReviews(filtered, name);
+        renderReviews(filtered, shelf);
         document.getElementById("reviews-grid").scrollIntoView({ behavior: "smooth", block: "start" });
       };
       grid.appendChild(div);

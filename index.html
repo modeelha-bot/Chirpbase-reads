@@ -240,171 +240,121 @@
 </footer>
 
 
-<script>
-let allBooks = [];
 
-async function loadBooks() {
-  try {
-    const res = await fetch("/api/notion");
-    if (!res.ok) throw new Error("API error");
-    const data = await res.json();
-    return data.results || [];
-  } catch(e) {
-    console.error("Failed to load:", e);
-    return null;
-  }
-}
+
+
+<script>
+var allBooks = [];
 
 function getProp(page, name, type) {
-  const prop = page.properties[name];
+  var prop = page.properties[name];
   if (!prop) return "";
-  if (type === "title") return prop.title?.map(t => t.plain_text).join("") || "";
-  if (type === "rich_text") return prop.rich_text?.map(t => t.plain_text).join("") || "";
-  if (type === "select") return prop.select?.name || "";
-  if (type === "files") return prop.files?.[0]?.file?.url || prop.files?.[0]?.external?.url || "";
+  if (type === "title") return (prop.title || []).map(function(t){ return t.plain_text; }).join("");
+  if (type === "rich_text") return (prop.rich_text || []).map(function(t){ return t.plain_text; }).join("");
+  if (type === "select") return (prop.select && prop.select.name) ? prop.select.name : "";
   return "";
 }
 
 function ratingStars(rating) {
-  const counts = (rating.match(/⭐/g) || []).length;
-  return "★".repeat(counts) + "☆".repeat(5 - counts);
+  var n = (rating.match(/⭐/g) || []).length;
+  var s = "";
+  for (var i = 0; i < n; i++) s += "★";
+  for (var i = n; i < 5; i++) s += "☆";
+  return s;
 }
 
 function renderReviews(books, label) {
-  const grid = document.getElementById("reviews-grid");
-  const titleEl = document.getElementById("reviews-title");
+  var grid = document.getElementById("reviews-grid");
+  var titleEl = document.getElementById("reviews-title");
   if (titleEl) titleEl.textContent = label || "Recent Reviews";
-
   if (!books || books.length === 0) {
-    grid.innerHTML = "<div style=\'padding:2rem;color:var(--muted);font-style:italic;grid-column:1/-1;\'>No books in this shelf yet.</div>";
+    grid.innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic;grid-column:1/-1'>No books in this shelf yet.</div>";
     return;
   }
-
-  grid.innerHTML = books.slice(0, 6).map(page => {
-    const title = getProp(page, "Book Title", "title");
-    const author = getProp(page, "Author", "rich_text");
-    const rating = getProp(page, "Rating", "select");
-    const genre = getProp(page, "Genre", "select");
-    const vibe = getProp(page, "Vibe", "rich_text");
-    const verdict = getProp(page, "Chirpbase Verdict", "rich_text");
-    const cover = getProp(page, "Cover", "files");
-    return `
-    <article class="review-card">
-      ${cover ? `<img src="${cover}" alt="${title}" class="card-cover" onerror="this.style.display=\'none\'">` : ""}
-      <div class="review-card-top">
-        <span class="card-genre">${genre}</span>
-        <span class="card-rating">${ratingStars(rating)}</span>
-      </div>
-      <div>
-        <h3 class="card-book-title">${title}</h3>
-        <p class="card-book-author">${author}</p>
-      </div>
-      ${vibe ? `<span class="card-vibe">${vibe}</span>` : ""}
-      <div>
-        <p class="card-verdict-label">Chirpbase Verdict</p>
-        <p class="card-verdict-text">${verdict}</p>
-      </div>
-    </article>`;
-  }).join("");
-
-  // Scroll to reviews section
-  document.querySelector("section").scrollIntoView({ behavior: "smooth" });
-}
-
-function filterByShelf(el, shelfName) {
-  // Highlight active shelf
-  document.querySelectorAll(".shelf-item").forEach(item => item.classList.remove("active"));
-  el.classList.add("active");
-
-  const filtered = allBooks.filter(page => getProp(page, "Shelf", "select") === shelfName);
-  renderReviews(filtered, shelfName.replace(/^\S+\s/, ""));
-
-  // Scroll reviews into view
-  document.getElementById("reviews-grid").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function showAllReviews() {
-  document.querySelectorAll(".shelf-item").forEach(el => el.classList.remove("active"));
-  renderReviews(allBooks, "All Reviews");
+  var html = "";
+  var shown = books.slice(0, 6);
+  for (var i = 0; i < shown.length; i++) {
+    var p = shown[i];
+    var title = getProp(p, "Book Title", "title");
+    var author = getProp(p, "Author", "rich_text");
+    var rating = getProp(p, "Rating", "select");
+    var genre = getProp(p, "Genre", "select");
+    var vibe = getProp(p, "Vibe", "rich_text");
+    var verdict = getProp(p, "Chirpbase Verdict", "rich_text");
+    html += "<article class='review-card'>";
+    html += "<div class='review-card-top'><span class='card-genre'>" + genre + "</span><span class='card-rating'>" + ratingStars(rating) + "</span></div>";
+    html += "<div><h3 class='card-book-title'>" + title + "</h3><p class='card-book-author'>" + author + "</p></div>";
+    if (vibe) html += "<span class='card-vibe'>" + vibe + "</span>";
+    if (verdict) html += "<div><p class='card-verdict-label'>Chirpbase Verdict</p><p class='card-verdict-text'>" + verdict + "</p></div>";
+    html += "</article>";
+  }
+  grid.innerHTML = html;
 }
 
 function renderShelves(books) {
-  const grid = document.getElementById("shelves-grid");
-  if (!books || books.length === 0) {
-    grid.innerHTML = "<div style=\'padding:2rem;color:var(--muted);font-style:italic;\'>Unable to load shelves.</div>";
-    return;
+  var grid = document.getElementById("shelves-grid");
+  if (!books || books.length === 0) { grid.innerHTML = ""; return; }
+  var counts = {};
+  for (var i = 0; i < books.length; i++) {
+    var s = getProp(books[i], "Shelf", "select");
+    if (s) counts[s] = (counts[s] || 0) + 1;
   }
-
-  const shelfCounts = {};
-  books.forEach(page => {
-    const shelf = getProp(page, "Shelf", "select");
-    if (shelf) shelfCounts[shelf] = (shelfCounts[shelf] || 0) + 1;
-  });
-
-  const shelfDescs = {
-    "💔 Soft Destruction": "Books that emotionally wreck you — gently, permanently, without warning.",
-    "🌍 African Literature": "Voices from across the continent. Stories that hold memory and motion at once.",
-    "🌱 Books for Your 20s": "For the years when everything is shifting and nothing makes complete sense yet.",
-    "🛋️ Feels Like Therapy": "Books that do the work your therapist is trying to do. Sometimes cheaper too.",
-    "💘 Romance & Heartbreak": "For every kind of love — the soft ones, the chaotic ones, the ones that linger.",
-    "🧠 Self-growth & Identity": "Books that hold a mirror up and refuse to let you look away.",
-    "⚡ Short Reads for Busy Minds": "Big ideas, small page counts. No excuses.",
-    "🌙 Fiction That Lingers": "Stories that stay with you long after the last page.",
-    "🖤 Grief & Loss": "For when you need a book that understands.",
-    "🔮 Supernatural & Dystopian": "Worlds that don't exist but somehow feel more real than ours."
-  };
-
-  const shelves = Object.entries(shelfCounts);
   grid.innerHTML = "";
-  shelves.forEach(([shelf, count]) => {
-    const div = document.createElement("div");
-    div.className = "shelf-item";
-    div.dataset.shelf = shelf;
-    const emoji = shelf.split(" ")[0];
-    const name = shelf.replace(/^[^\s]+\s/, "");
-    div.innerHTML = `
-      <span class="shelf-emoji">${emoji}</span>
-      <h3 class="shelf-name">${name}</h3>
-      <p class="shelf-desc">${shelfDescs[shelf] || ""}</p>
-      <p class="shelf-count">${count} book${count !== 1 ? "s" : ""}</p>`;
-    div.addEventListener("click", function() {
-      document.querySelectorAll(".shelf-item").forEach(el => el.classList.remove("active"));
-      this.classList.add("active");
-      const filtered = allBooks.filter(page => getProp(page, "Shelf", "select") === this.dataset.shelf);
-      const label = this.dataset.shelf.replace(/^[^\s]+\s/, "");
-      renderReviews(filtered, label);
-      document.getElementById("reviews-grid").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-    grid.appendChild(div);
-  });
+  var shelves = Object.keys(counts);
+  for (var i = 0; i < shelves.length; i++) {
+    (function(shelf, count) {
+      var div = document.createElement("div");
+      div.className = "shelf-item";
+      var parts = shelf.split(" ");
+      var emoji = parts[0];
+      var name = parts.slice(1).join(" ");
+      div.innerHTML = "<span class='shelf-emoji'>" + emoji + "</span>" +
+        "<h3 class='shelf-name'>" + name + "</h3>" +
+        "<p class='shelf-count'>" + count + " book" + (count !== 1 ? "s" : "") + "</p>";
+      div.onclick = function() {
+        var all = document.querySelectorAll(".shelf-item");
+        for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
+        div.classList.add("active");
+        var filtered = [];
+        for (var k = 0; k < allBooks.length; k++) {
+          if (getProp(allBooks[k], "Shelf", "select") === shelf) filtered.push(allBooks[k]);
+        }
+        renderReviews(filtered, name);
+        document.getElementById("reviews-grid").scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      grid.appendChild(div);
+    })(shelves[i], counts[shelves[i]]);
+  }
 }
 
 function updateStats(books) {
-  const countEl = document.getElementById("book-count");
-  if (countEl) countEl.textContent = books.length;
-
+  var el = document.getElementById("book-count");
+  if (el) el.textContent = books.length;
   if (books.length > 0) {
-    const featured = books[0];
-    const titleEl = document.querySelector(".book-title-featured");
-    const authorEl = document.querySelector(".book-author-featured");
-    const verdictEl = document.querySelector(".book-verdict");
-    if (titleEl) titleEl.textContent = getProp(featured, "Book Title", "title");
-    if (authorEl) authorEl.textContent = getProp(featured, "Author", "rich_text");
-    if (verdictEl) verdictEl.textContent = '"' + getProp(featured, "Chirpbase Verdict", "rich_text") + '"';
+    var f = books[0];
+    var t = document.querySelector(".book-title-featured");
+    var a = document.querySelector(".book-author-featured");
+    var v = document.querySelector(".book-verdict");
+    if (t) t.textContent = getProp(f, "Book Title", "title");
+    if (a) a.textContent = getProp(f, "Author", "rich_text");
+    if (v) v.textContent = '"' + getProp(f, "Chirpbase Verdict", "rich_text") + '"';
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  const books = await loadBooks();
-  if (books) {
-    allBooks = books;
-    renderReviews(books.slice(0, 3), "Recent Reviews");
-    renderShelves(books);
-    updateStats(books);
-  } else {
-    document.getElementById("reviews-grid").innerHTML = "<div style=\'padding:2rem;color:var(--muted);font-style:italic;\'>Unable to load reviews right now.</div>";
-    document.getElementById("shelves-grid").innerHTML = "<div style=\'padding:2rem;color:var(--muted);font-style:italic;\'>Unable to load shelves right now.</div>";
-  }
-});
+window.onload = function() {
+  fetch("/api/notion")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      allBooks = data.results || [];
+      renderReviews(allBooks.slice(0, 3), "Recent Reviews");
+      renderShelves(allBooks);
+      updateStats(allBooks);
+    })
+    .catch(function(e) {
+      console.error(e);
+      document.getElementById("reviews-grid").innerHTML = "<div style='padding:2rem;color:var(--muted);font-style:italic'>Unable to load reviews.</div>";
+    });
+};
 </script>
 </body>
+</html>

@@ -275,11 +275,11 @@ function renderReviews(books, label) {
   var shown = books.slice(0, 6);
   for (var i = 0; i < shown.length; i++) {
     var p = shown[i];
-    var title = getProp(p, "Book Title", "title");
+    var title = getProp(p, "Book Title ", "title");
     var author = getProp(p, "Author", "rich_text");
     var rating = getProp(p, "Rating", "select");
     var genre = getProp(p, "Genre", "select");
-    var vibe = getProp(p, "Vibe", "rich_text");
+    var vibe = getProp(p, "Vibe ", "rich_text");
     var verdict = getProp(p, "Chirpbase Verdict", "rich_text");
     html += "<article class='review-card'>";
     html += "<div class='review-card-top'><span class='card-genre'>" + genre + "</span><span class='card-rating'>" + ratingStars(rating) + "</span></div>";
@@ -313,7 +313,7 @@ function renderShelves(books) {
         div.classList.add("active");
         var filtered = [];
         for (var k = 0; k < allBooks.length; k++) {
-          if (getProp(allBooks[k], "Shelf", "select") === shelf) filtered.push(allBooks[k]);
+          if (getProp(allBooks[k], "Shelf ", "select") === shelf) filtered.push(allBooks[k]);
         }
         renderReviews(filtered, shelf);
         document.getElementById("reviews-grid").scrollIntoView({ behavior: "smooth", block: "start" });

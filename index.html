@@ -247,7 +247,12 @@
 var allBooks = [];
 
 function getProp(page, name, type) {
-  var prop = page.properties[name];
+  var props = page.properties || {};
+  var keys = Object.keys(props);
+  var prop = null;
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].trim() === name) { prop = props[keys[i]]; break; }
+  }
   if (!prop) return "";
   if (type === "title") return (prop.title || []).map(function(t){ return t.plain_text; }).join("");
   if (type === "rich_text") return (prop.rich_text || []).map(function(t){ return t.plain_text; }).join("");
@@ -275,11 +280,11 @@ function renderReviews(books, label) {
   var shown = books.slice(0, 6);
   for (var i = 0; i < shown.length; i++) {
     var p = shown[i];
-    var title = getProp(p, "Book Title ", "title");
+    var title = getProp(p, "Book Title", "title");
     var author = getProp(p, "Author", "rich_text");
     var rating = getProp(p, "Rating", "select");
     var genre = getProp(p, "Genre", "select");
-    var vibe = getProp(p, "Vibe ", "rich_text");
+    var vibe = getProp(p, "Vibe", "rich_text");
     var verdict = getProp(p, "Chirpbase Verdict", "rich_text");
     html += "<article class='review-card'>";
     html += "<div class='review-card-top'><span class='card-genre'>" + genre + "</span><span class='card-rating'>" + ratingStars(rating) + "</span></div>";
@@ -293,27 +298,26 @@ function renderReviews(books, label) {
 
 function renderShelves(books) {
   var grid = document.getElementById("shelves-grid");
-  if (!books || books.length === 0) { grid.innerHTML = ""; return; }
+  grid.innerHTML = "";
   var counts = {};
   for (var i = 0; i < books.length; i++) {
     var s = getProp(books[i], "Shelf", "select");
     if (s) counts[s] = (counts[s] || 0) + 1;
   }
-  grid.innerHTML = "";
   var shelves = Object.keys(counts);
   for (var i = 0; i < shelves.length; i++) {
     (function(shelf, count) {
       var div = document.createElement("div");
       div.className = "shelf-item";
-      div.innerHTML = "<h3 class='shelf-name'>" + shelf + "</h3>" +
-        "<p class='shelf-count'>" + count + " book" + (count !== 1 ? "s" : "") + "</p>";
+      div.innerHTML = "<h3 class='shelf-name' style='font-family:Playfair Display,serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem'>" + shelf + "</h3>" +
+        "<p class='shelf-count' style='font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--rust);margin-top:0.75rem'>" + count + " book" + (count !== 1 ? "s" : "") + "</p>";
       div.onclick = function() {
         var all = document.querySelectorAll(".shelf-item");
         for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
         div.classList.add("active");
         var filtered = [];
         for (var k = 0; k < allBooks.length; k++) {
-          if (getProp(allBooks[k], "Shelf ", "select") === shelf) filtered.push(allBooks[k]);
+          if (getProp(allBooks[k], "Shelf", "select") === shelf) filtered.push(allBooks[k]);
         }
         renderReviews(filtered, shelf);
         document.getElementById("reviews-grid").scrollIntoView({ behavior: "smooth", block: "start" });

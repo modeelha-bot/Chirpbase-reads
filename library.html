@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library — Chirpbase Reads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cream: #F7F3EC; --ink: #1A1410; --rust: #B85C38; --rust-light: #F0D5C8;
+    --sage: #4A5E4B; --gold: #C9963A; --muted: #6B6058; --border: #D9D2C8;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: "DM Sans", sans-serif; font-weight: 300; line-height: 1.7; }
+
+  /* NAV */
+  nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 4rem; border-bottom: 1px solid var(--border); background: var(--cream); position: sticky; top: 0; z-index: 100; }
+  .nav-brand { display: flex; flex-direction: column; line-height: 1.1; }
+  .nav-eyebrow { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .nav-title { font-family: "Playfair Display", serif; font-size: 1.25rem; font-weight: 700; color: var(--ink); }
+  .nav-links { display: flex; gap: 2.5rem; list-style: none; align-items: center; }
+  .nav-links a { text-decoration: none; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 400; transition: color 0.2s; }
+  .nav-links a:hover, .nav-links a.active { color: var(--ink); }
+  .nav-library { color: var(--rust) !important; border: 1px solid var(--rust); padding: 0.4rem 0.9rem; }
+
+  /* HERO */
+  .library-hero { padding: 4rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; }
+  .library-hero h1 { font-family: "Playfair Display", serif; font-size: clamp(2.5rem, 4vw, 3.5rem); font-weight: 400; letter-spacing: -0.02em; line-height: 1.1; }
+  .library-hero h1 em { font-style: italic; color: var(--rust); }
+  .library-hero p { font-size: 0.9rem; color: var(--muted); max-width: 340px; text-align: right; line-height: 1.7; }
+
+  /* FILTERS */
+  .filters { padding: 1.5rem 4rem; border-bottom: 1px solid var(--border); display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+  .filter-label { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-right: 0.5rem; }
+  .filter-btn { padding: 0.4rem 1rem; border: 1px solid var(--border); background: transparent; font-family: "DM Sans", sans-serif; font-size: 0.75rem; color: var(--muted); cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em; }
+  .filter-btn:hover, .filter-btn.active { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+  .filter-btn.shelf-btn.active { background: var(--rust); border-color: var(--rust); }
+
+  /* STATS BAR */
+  .stats-bar { padding: 1rem 4rem; border-bottom: 1px solid var(--border); display: flex; gap: 3rem; }
+  .stat { display: flex; flex-direction: column; }
+  .stat-num { font-family: "Playfair Display", serif; font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 0.2rem; }
+
+  /* BOOK GRID */
+  .books-grid { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); }
+  .book-card { padding: 2rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.75rem; cursor: pointer; transition: background 0.2s; }
+  .book-card:hover { background: rgba(26,20,16,0.03); }
+  .book-card:nth-child(4n) { border-right: none; }
+  .book-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .book-genre { font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+  .book-rating { font-size: 0.85rem; color: var(--gold); }
+  .book-title { font-family: "Playfair Display", serif; font-size: 1.1rem; font-weight: 700; line-height: 1.2; color: var(--ink); }
+  .book-author { font-size: 0.78rem; color: var(--muted); }
+  .book-vibe { display: inline-block; font-size: 0.68rem; padding: 0.25rem 0.7rem; background: var(--rust-light); color: var(--rust); letter-spacing: 0.05em; }
+  .book-shelf { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--sage); margin-top: auto; }
+  .no-results { padding: 4rem; color: var(--muted); font-style: italic; grid-column: 1/-1; text-align: center; }
+
+  /* FOOTER */
+  footer { padding: 3rem 4rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); }
+  .footer-brand { font-family: "Playfair Display", serif; font-size: 1rem; font-weight: 700; }
+  .footer-brand span { display: block; font-size: 0.65rem; font-family: "DM Sans", sans-serif; font-weight: 300; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 0.2rem; }
+  .footer-links { display: flex; gap: 2rem; list-style: none; }
+  .footer-links a { text-decoration: none; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  @media (max-width: 900px) {
+    nav { padding: 1.2rem 1.5rem; }
+    .nav-links { gap: 1.2rem; }
+    .library-hero { flex-direction: column; gap: 1rem; padding: 2.5rem 1.5rem; }
+    .library-hero p { text-align: left; }
+    .filters { padding: 1.2rem 1.5rem; }
+    .stats-bar { padding: 1rem 1.5rem; gap: 2rem; }
+    .books-grid { grid-template-columns: repeat(2, 1fr); }
+    .book-card:nth-child(4n) { border-right: 1px solid var(--border); }
+    .book-card:nth-child(2n) { border-right: none; }
+    footer { flex-direction: column; gap: 1.5rem; padding: 2rem 1.5rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <span class="nav-eyebrow">Est. 2026</span>
+    <span class="nav-title">Chirpbase Reads</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="index.html#reviews-section">Reviews</a></li>
+    <li><a href="index.html#shelves-section">Shelves</a></li>
+    <li><a href="about.html">Start Here</a></li>
+    <li><a href="library.html" class="nav-library active">Library ↗</a></li>
+  </ul>
+</nav>
+
+<div class="library-hero">
+  <h1>The full<br><em>library.</em></h1>
+  <p>Every book we've read, rated, and felt. Browse by shelf, genre, or just scroll through.</p>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num" id="total-count">—</div><div class="stat-label">Books</div></div>
+  <div class="stat"><div class="stat-num" id="shelf-count">—</div><div class="stat-label">Shelves</div></div>
+  <div class="stat"><div class="stat-num" id="genre-count">—</div><div class="stat-label">Genres</div></div>
+</div>
+
+<div class="filters" id="filters">
+  <span class="filter-label">Filter:</span>
+  <button class="filter-btn active" onclick="filterBooks(this, 'all')">All books</button>
+</div>
+
+<div class="books-grid" id="books-grid">
+  <div class="no-results">Loading library...</div>
+</div>
+
+<footer>
+  <div class="footer-brand">Chirpbase Reads <span>A Chirpbase production</span></div>
+  <ul class="footer-links">
+    <li><a href="#">Instagram</a></li>
+    <li><a href="#">Twitter</a></li>
+    <li><a href="about.html">About</a></li>
+  </ul>
+</footer>
+
+<script>
+var allBooks = [];
+var activeFilter = "all";
+
+function getProp(page, name, type) {
+  var props = page.properties || {};
+  var keys = Object.keys(props);
+  var prop = null;
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].trim() === name) { prop = props[keys[i]]; break; }
+  }
+  if (!prop) return "";
+  if (type === "title") return (prop.title || []).map(function(t){ return t.plain_text; }).join("");
+  if (type === "rich_text") return (prop.rich_text || []).map(function(t){ return t.plain_text; }).join("");
+  if (type === "select") return (prop.select && prop.select.name) ? prop.select.name : "";
+  return "";
+}
+
+function ratingStars(rating) {
+  var n = (rating.match(/⭐/g) || []).length;
+  var s = "";
+  for (var i = 0; i < n; i++) s += "★";
+  for (var i = n; i < 5; i++) s += "☆";
+  return s;
+}
+
+function filterBooks(btn, value) {
+  activeFilter = value;
+  var btns = document.querySelectorAll(".filter-btn");
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove("active");
+  btn.classList.add("active");
+  renderBooks();
+}
+
+function renderBooks() {
+  var grid = document.getElementById("books-grid");
+  var filtered = allBooks;
+  if (activeFilter !== "all") {
+    filtered = allBooks.filter(function(b) {
+      var shelf = getProp(b, "Shelf", "select");
+      var genre = getProp(b, "Genre", "select");
+      return shelf === activeFilter || genre === activeFilter;
+    });
+  }
+  if (filtered.length === 0) {
+    grid.innerHTML = "<div class='no-results'>No books found.</div>";
+    return;
+  }
+  var html = "";
+  for (var i = 0; i < filtered.length; i++) {
+    var p = filtered[i];
+    var title = getProp(p, "Book Title", "title");
+    var author = getProp(p, "Author", "rich_text");
+    var rating = getProp(p, "Rating", "select");
+    var genre = getProp(p, "Genre", "select");
+    var vibe = getProp(p, "Vibe", "rich_text");
+    var shelf = getProp(p, "Shelf", "select");
+    html += "<div class='book-card'>";
+    html += "<div class='book-card-top'><span class='book-genre'>" + genre + "</span><span class='book-rating'>" + ratingStars(rating) + "</span></div>";
+    html += "<div><h3 class='book-title'>" + title + "</h3><p class='book-author'>" + author + "</p></div>";
+    if (vibe) html += "<span class='book-vibe'>" + vibe + "</span>";
+    if (shelf) html += "<p class='book-shelf'>" + shelf + "</p>";
+    html += "</div>";
+  }
+  grid.innerHTML = html;
+}
+
+function buildFilters(books) {
+  var shelves = {};
+  var genres = {};
+  for (var i = 0; i < books.length; i++) {
+    var s = getProp(books[i], "Shelf", "select");
+    var g = getProp(books[i], "Genre", "select");
+    if (s) shelves[s] = true;
+    if (g) genres[g] = true;
+  }
+
+  var filtersEl = document.getElementById("filters");
+  var html = "<span class='filter-label'>Shelf:</span>";
+  var shelfKeys = Object.keys(shelves);
+  for (var i = 0; i < shelfKeys.length; i++) {
+    html += "<button class='filter-btn shelf-btn' onclick='filterBooks(this, "" + shelfKeys[i].replace(/"/g, "&quot;") + "")'>" + shelfKeys[i] + "</button>";
+  }
+  html += "<span class='filter-label' style='margin-left:1rem'>Genre:</span>";
+  var genreKeys = Object.keys(genres);
+  for (var i = 0; i < genreKeys.length; i++) {
+    html += "<button class='filter-btn' onclick='filterBooks(this, "" + genreKeys[i].replace(/"/g, "&quot;") + "")'>" + genreKeys[i] + "</button>";
+  }
+  filtersEl.innerHTML = "<span class='filter-label'>Filter:</span><button class='filter-btn active' onclick='filterBooks(this, "all")'>All books</button>" + html;
+
+  // Update stats
+  document.getElementById("total-count").textContent = books.length;
+  document.getElementById("shelf-count").textContent = shelfKeys.length;
+  document.getElementById("genre-count").textContent = genreKeys.length;
+}
+
+fetch("/api/notion")
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    allBooks = data.results || [];
+    buildFilters(allBooks);
+    renderBooks();
+  })
+  .catch(function(e) {
+    console.error(e);
+    document.getElementById("books-grid").innerHTML = "<div class='no-results'>Unable to load library right now.</div>";
+  });
+</script>
+</body>
+</html>

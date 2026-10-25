@@ -107,7 +107,7 @@
 
 <div class="filters" id="filters">
   <span class="filter-label">Filter:</span>
-  <button class="filter-btn active" onclick="filterBooks(this, 'all')">All books</button>
+  
 </div>
 
 <div class="books-grid" id="books-grid">
@@ -190,30 +190,44 @@ function renderBooks() {
   grid.innerHTML = html;
 }
 
+function makeBtn(label, value, extraClass) {
+  var b = document.createElement("button");
+  b.className = "filter-btn" + (extraClass ? " " + extraClass : "");
+  b.textContent = label;
+  b.addEventListener("click", function() { filterBooks(b, value); });
+  return b;
+}
+
+function makeLabel(text, margin) {
+  var s = document.createElement("span");
+  s.className = "filter-label";
+  s.textContent = text;
+  if (margin) s.style.marginLeft = margin;
+  return s;
+}
+
 function buildFilters(books) {
-  var shelves = {};
-  var genres = {};
+  var shelves = {}, genres = {};
   for (var i = 0; i < books.length; i++) {
     var s = getProp(books[i], "Shelf", "select");
     var g = getProp(books[i], "Genre", "select");
     if (s) shelves[s] = true;
     if (g) genres[g] = true;
   }
-
-  var filtersEl = document.getElementById("filters");
-  var html = "<span class='filter-label'>Shelf:</span>";
   var shelfKeys = Object.keys(shelves);
-  for (var i = 0; i < shelfKeys.length; i++) {
-    html += "<button class='filter-btn shelf-btn' onclick='filterBooks(this, "" + shelfKeys[i].replace(/"/g, "&quot;") + "")'>" + shelfKeys[i] + "</button>";
-  }
-  html += "<span class='filter-label' style='margin-left:1rem'>Genre:</span>";
   var genreKeys = Object.keys(genres);
-  for (var i = 0; i < genreKeys.length; i++) {
-    html += "<button class='filter-btn' onclick='filterBooks(this, "" + genreKeys[i].replace(/"/g, "&quot;") + "")'>" + genreKeys[i] + "</button>";
-  }
-  filtersEl.innerHTML = "<span class='filter-label'>Filter:</span><button class='filter-btn active' onclick='filterBooks(this, "all")'>All books</button>" + html;
 
-  // Update stats
+  var el = document.getElementById("filters");
+  el.innerHTML = "";
+  el.appendChild(makeLabel("Filter:"));
+  var all = makeBtn("All books", "all");
+  all.classList.add("active");
+  el.appendChild(all);
+  el.appendChild(makeLabel("Shelf:", "1rem"));
+  for (var i = 0; i < shelfKeys.length; i++) el.appendChild(makeBtn(shelfKeys[i], shelfKeys[i], "shelf-btn"));
+  el.appendChild(makeLabel("Genre:", "1rem"));
+  for (var i = 0; i < genreKeys.length; i++) el.appendChild(makeBtn(genreKeys[i], genreKeys[i]));
+
   document.getElementById("total-count").textContent = books.length;
   document.getElementById("shelf-count").textContent = shelfKeys.length;
   document.getElementById("genre-count").textContent = genreKeys.length;
